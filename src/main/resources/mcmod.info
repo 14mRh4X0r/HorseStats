@@ -1,0 +1,14 @@
+[{
+  "modid": "horsestats",
+  "name": "HorseStats",
+  "description": "A Minecraft mod that displays a horse's stats in its inventory screen",
+  "version": "${version}",
+  "mcversion": "${mc_version}",
+  "url": "",
+  "updateUrl": "",
+  "authors": ["14mRh4X0r"],
+  "credits": "Wubbi for the original base mod",
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": []
+}]

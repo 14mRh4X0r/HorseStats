@@ -2,7 +2,7 @@ apply plugin: 'java'
 apply plugin: 'idea'
 apply plugin: 'eclipse'
 
-version = "0.1.0"
+version = "0.2.0-dev"
 archivesBaseName = "horsestats"
 
 ext.mc_version = "1.6.4"
@@ -27,11 +27,35 @@ eclipse {
     plusConfigurations += configurations.provided
   }
 }
-// MCP {{{1
-import org.apache.tools.ant.taskdefs.condition.Os
-import java.io.File
 
-ext.mcpDir = new File(buildDir, 'mcp')
+// FML {{{1
+task downloadFML(type: Download) {
+  src = 'http://files.minecraftforge.net/fml/fml-universal-1.6.4-6.4.41.787.jar'
+  dest = new File(buildDir, 'fml.jar')
+}
+// }}}1
+
+repositories {
+    maven {
+      name = "liteloader"
+      url = "http://dl.liteloader.com/versions/"
+    }
+    maven {
+      name = "minecraft"
+      url = "https://libraries.minecraft.net/"
+    }
+    mavenCentral()
+}
+
+dependencies {
+  api "com.mumfrey:liteloader:${mc_version}"
+  api files(downloadFML.dest)
+
+  provided "net.minecraft:launchwrapper:1.8"
+}
+
+// Custom tasks {{{1
+import java.io.File
 
 class Download extends DefaultTask {
   @Input String src
@@ -40,6 +64,28 @@ class Download extends DefaultTask {
     ant.get(src: this.src, dest: this.dest)
   }
 }
+
+class Reobf extends JavaExec {
+  @Input String src
+  @OutputFile File out
+  @Override void exec() {
+    this.main = 'immibis.bon.cui.MCPRemap'
+    this.classpath = project.files(project.tasks.downloadBON.dest)
+    this.args = ['-mcp', project.ext.mcpDir.absolutePath,
+            '-from', 'MCP',
+            '-to',   'OBF',
+            '-side', 'CLIENT',
+            '-ref',  new File(project.ext.mcpDir, 'bin/minecraft').absolutePath,
+            '-in', this.src,
+            '-out', this.out.absolutePath]
+    super.exec()
+  }
+}
+
+// MCP {{{1
+import org.apache.tools.ant.taskdefs.condition.Os
+
+ext.mcpDir = new File(buildDir, 'mcp')
 
 def runMCPTask(String name) {
   def cmd
@@ -139,7 +185,9 @@ task getAssets {
 } // }}}2
 
 task setupMCP(dependsOn: [getMCP, getAssets]) <<{
-  runMCPTask('decompile')
+  if (!new File(mcpDir, 'src/minecraft').exists()) {
+    runMCPTask('decompile')
+  }
 
   def binDir = files(new File(mcpDir, 'bin/minecraft'), fileTree(dir: new File(mcpDir, 'jars/libraries')))
 
@@ -170,41 +218,33 @@ task downloadBON(type: Download) {
   dest = new File(buildDir, 'BON.jar')
 }
 
-task deobApiDependencies(dependsOn: [downloadBON, setupMCP]) <<{
-  configurations.api.each { File file ->
-    File deob = deobFile(file)
+task deobApiDependencies(dependsOn: [downloadBON, setupMCP, configurations.api]) {
+  inputs.files files(configurations.api)
+  outputs.files files(configurations.api.collect { it.absolutePath + '.deob' })
 
-    sourceSets.main.compileClasspath += files(deob)
-    idea.module.scopes.PROVIDED.plus += files(deob)
-    eclipse.classpath.plusConfigurations += files(deob)
+  doLast {
+    configurations.api.each { File file ->
+      File deob = deobFile(file)
+    }
   }
 }
 
-compileJava.dependsOn deobApiDependencies
+task addApiDependenciesToClasspath(dependsOn: deobApiDependencies) {
+  inputs.files deobApiDependencies.outputs.files
+
+  doLast {
+    sourceSets.main.compileClasspath += deobApiDependencies.outputs.files
+    idea.module.scopes.PROVIDED.plus += deobApiDependencies.outputs.files
+    eclipse.classpath.plusConfigurations += deobApiDependencies.outputs.files
+  }
+}
+compileJava.dependsOn addApiDependenciesToClasspath
 // }}}1
-
-repositories {
-    maven {
-      name = "liteloader"
-      url = "http://dl.liteloader.com/versions/"
-    }
-    maven {
-      name = "minecraft"
-      url = "https://libraries.minecraft.net/"
-    }
-    mavenCentral()
-}
-
-dependencies {
-  api "com.mumfrey:liteloader:${mc_version}"
-
-  provided "net.minecraft:launchwrapper:1.8"
-  provided "org.ow2.asm:asm-all:4.1"
-}
 
 processResources {
   from(sourceSets.main.resources.srcDirs) {
     include 'litemod.json'
+    include 'mcmod.info'
 
     expand 'version': version, 'mc_version': mc_version
   }
@@ -217,19 +257,30 @@ compileJava {
 }
 
 jar {
-  extension 'litemod'
+  classifier = 'deob'
 }
 
-task reobf(dependsOn: [tasks.jar, downloadBON, setupMCP], type: JavaExec) {
-  main = 'immibis.bon.cui.MCPRemap'
-  classpath = files(new File(buildDir, 'BON.jar'))
-  args = ['-mcp', mcpDir.absolutePath,
-          '-from', 'MCP',
-          '-to', 'OBF',
-          '-side', 'CLIENT',
-          '-ref', new File(mcpDir, 'bin/minecraft').absolutePath,
-          '-in', jar.archivePath,
-          '-out', new File(jar.destinationDir, "${archivesBaseName}-${version}.${jar.extension}").absolutePath]
+task litemod(type: Jar) {
+  extension = 'litemod'
+  classifier = 'deob'
 }
 
-build.dependsOn reobf
+task reobfFML(dependsOn: [tasks.jar, downloadBON, setupMCP], type: Reobf) {
+  src = jar.archivePath
+  out = new File(jar.destinationDir, "${archivesBaseName}-${version}-nomanifest.${jar.extension}")
+}
+
+task reobfLitemod(dependsOn: [litemod, downloadBON, setupMCP], type: Reobf) {
+  src = litemod.archivePath
+  out = new File(litemod.destinationDir, "${archivesBaseName}-${version}.${litemod.extension}")
+}
+
+task fmlManifest(dependsOn: reobfFML, type: Jar) {
+  from zipTree(reobfFML.out)
+
+  manifest {
+    attributes FMLCorePlugin: '_14mrh4x0r.horsestats.FMLHorseStatsCorePlugin'
+  }
+}
+
+assemble.dependsOn fmlManifest, reobfLitemod
