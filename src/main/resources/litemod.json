@@ -4,6 +4,6 @@
   "classTransformerClass": "_14mrh4x0r.horsestats.HorseScreenTransformer",
   "mcversion": "${mc_version}",
   "name": "HorseStats",
-  "revision": "1",
+  "revision": "2",
   "version": "${version}"
 }

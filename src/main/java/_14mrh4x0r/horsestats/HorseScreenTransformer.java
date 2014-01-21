@@ -34,7 +34,6 @@ public class HorseScreenTransformer implements IClassTransformer {
     @Override
     public byte[] transform(String name, String transformedName, byte[] basicClass) {
         if (horseScreenClass.equals(name) || horseScreenClassOb.equals(name)) {
-            java.util.logging.Logger.getLogger("liteloader.horsestats").info("[HorseStats] Hooking into the horse GUI...");
             ClassReader cr = new ClassReader(basicClass);
             ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_FRAMES);
             CheckClassAdapter cca = new CheckClassAdapter(cw);

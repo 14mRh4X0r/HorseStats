@@ -2,7 +2,7 @@ apply plugin: 'java'
 apply plugin: 'idea'
 apply plugin: 'eclipse'
 
-version = "0.2.0-dev"
+version = "0.2.0"
 archivesBaseName = "horsestats"
 
 ext.mc_version = "1.6.4"
@@ -66,7 +66,7 @@ class Download extends DefaultTask {
 }
 
 class Reobf extends JavaExec {
-  @Input String src
+  @InputFile File src
   @OutputFile File out
   @Override void exec() {
     this.main = 'immibis.bon.cui.MCPRemap'
@@ -218,7 +218,7 @@ task downloadBON(type: Download) {
   dest = new File(buildDir, 'BON.jar')
 }
 
-task deobApiDependencies(dependsOn: [downloadBON, setupMCP, configurations.api]) {
+task deobApiDependencies(dependsOn: [downloadBON, setupMCP, configurations.api, downloadFML]) {
   inputs.files files(configurations.api)
   outputs.files files(configurations.api.collect { it.absolutePath + '.deob' })
 
@@ -249,7 +249,10 @@ processResources {
     expand 'version': version, 'mc_version': mc_version
   }
 
-  from(sourceSets.main.resources.srcDirs) { exclude 'litemod.json' }
+  from(sourceSets.main.resources.srcDirs) {
+    exclude 'litemod.json'
+    exclude 'mcmod.info'
+  }
 }
 
 compileJava {
@@ -257,10 +260,22 @@ compileJava {
 }
 
 jar {
+  exclude '_14mrh4x0r/horsestats/LiteModHorseStats.class'
+  exclude 'litemod.json'
+
   classifier = 'deob'
 }
 
 task litemod(type: Jar) {
+  from(compileJava.outputs) {
+    exclude '_14mrh4x0r/horsestats/FMLHorseStatsCorePlugin.class'
+    exclude '_14mrh4x0r/horsestats/FMLHorseStatsCorePlugin$ModContainer.class'
+  }
+
+  from(processResources.outputs) {
+    exclude 'mcmod.info'
+  }
+
   extension = 'litemod'
   classifier = 'deob'
 }

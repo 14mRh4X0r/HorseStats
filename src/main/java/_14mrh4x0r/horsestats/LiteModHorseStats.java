@@ -31,7 +31,7 @@ public class LiteModHorseStats implements LiteMod {
 
     @Override
     public String getVersion() {
-        return "0.2.0-dev";
+        return "0.2.0";
     }
 
     @Override
