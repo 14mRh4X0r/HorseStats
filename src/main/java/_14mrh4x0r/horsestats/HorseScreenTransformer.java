@@ -1,3 +1,19 @@
+/*
+ * Copyright (C) 2014 Willem Mulder
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU Affero General Public License as published by the
+ * Free Software Foundation, either version 3 of the License, or (at your
+ * option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public License
+ * for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package _14mrh4x0r.horsestats;
 
 import net.minecraft.launchwrapper.IClassTransformer;
@@ -63,8 +79,8 @@ public class HorseScreenTransformer implements IClassTransformer {
                                                 obbed ? "w" : "field_110411_w",
                                                 obbed ? "Lrs;" : "Lnet/minecraft/src/EntityHorse;");
 
-                    // LiteModHorseStats.onRenderHorseInventory(this, this.fontRenderer, this.ySize, this.horse);
-                    mv.visitMethodInsn(INVOKESTATIC, "_14mrh4x0r/horsestats/LiteModHorseStats", "onRenderHorseInventory",
+                    // HorseStats.onRenderHorseInventory(this, this.fontRenderer, this.ySize, this.horse);
+                    mv.visitMethodInsn(INVOKESTATIC, "_14mrh4x0r/horsestats/HorseStats", "onRenderHorseInventory",
                                        obbed ? "(Laxu;Lavi;ILrs;)V" :
                             "(Lnet/minecraft/src/GuiScreenHorseInventory;Lnet/minecraft/src/FontRenderer;ILnet/minecraft/src/EntityHorse;)V");
                     mv.visitInsn(RETURN);
